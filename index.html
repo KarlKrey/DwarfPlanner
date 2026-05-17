@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>DWARF 3 Beobachtungsplaner · Stralsund</title>
+<style>
+:root{
+  --bg:#0d1117;--bg2:#161b22;--bg3:#21262d;--border:#30363d;
+  --text:#e6edf3;--muted:#8b949e;
+  --green:#3fb950;--green-bg:#0d2818;--green-dim:#1a4d2e;
+  --blue:#58a6ff;--blue-bg:#0d1c36;
+  --yellow:#d29922;--yellow-bg:#2d1f03;
+  --red:#f85149;--red-bg:#2a0d0b;
+  --orange:#e3b341;--purple:#c084fc;--purple-bg:#1a0c2e;
+  --mono:'JetBrains Mono','Fira Code','Courier New',monospace;
+  --sans:'Inter',system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13px;line-height:1.5;padding:20px}
+h1{font-size:20px;font-weight:600}
+.subtitle{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:3px}
+.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;flex-wrap:wrap;gap:12px}
+.header-right{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.clock{font-family:var(--mono);font-size:22px;font-weight:600}
+.clock-label{font-size:10px;color:var(--muted);text-align:right}
+button{background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-family:var(--sans)}
+button:hover{background:#2d333a}
+.panel{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
+.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.sec{font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--bg3);font-size:12px}
+.row:last-child{border:none}
+.rk{color:var(--muted)}
+.rv{font-family:var(--mono);font-weight:500}
+.badge{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:500}
+/* Object cards */
+.oc{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+.oc.top1{border-color:var(--blue)}
+.oc.top2,.oc.top3{border-color:#2d4a6e}
+.card-top{display:flex;align-items:stretch;border-bottom:1px solid var(--border)}
+.card-text{flex:1;padding:12px 13px;min-width:0}
+.card-img-wrap{flex-shrink:0;width:130px;height:130px;background:var(--bg3);position:relative;overflow:hidden}
+.card-img-wrap img{width:100%;height:100%;object-fit:cover;display:block}
+.img-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:10px;text-align:center;padding:8px;line-height:1.4}
+.img-credit{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.55);font-size:8px;color:rgba(255,255,255,0.5);padding:2px 5px;text-align:center}
+.obj-name{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px}
+.obj-cat{font-size:10px;color:var(--blue);font-family:var(--mono);margin-bottom:5px}
+.obj-desc{font-size:11px;color:var(--muted);margin-bottom:7px;line-height:1.45}
+.tags{display:flex;flex-wrap:wrap;gap:3px}
+.info-grid{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--border);background:var(--bg3)}
+.ig{padding:7px 10px;border-right:1px solid var(--border)}
+.ig:last-child{border:none}
+.ik{font-size:9px;color:var(--muted);letter-spacing:.4px;margin-bottom:2px;text-transform:uppercase}
+.iv{font-size:12px;font-family:var(--mono);font-weight:500;color:var(--text)}
+.curve-wrap{background:var(--bg3);border-bottom:1px solid var(--border)}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--border)}
+.sc{padding:7px 11px;border-right:1px solid var(--border)}
+.sc:last-child{border:none}
+.sl2{font-size:9px;color:var(--muted);margin-bottom:2px;text-transform:uppercase;letter-spacing:.5px}
+.sv3{font-family:var(--mono);font-size:14px;font-weight:600}
+.sblock{padding:10px 13px 12px;background:#0a0d12}
+.slabel{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:7px}
+.sgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:7px 0}
+.sk2{font-size:9px;color:var(--muted);margin-bottom:2px}
+.sv2{font-family:var(--mono);font-size:12px;font-weight:600}
+.tip{padding:7px 10px;background:var(--bg3);border-radius:6px;border:1px solid var(--border);font-size:11px;color:#a0afc0;line-height:1.5;margin-bottom:6px}
+.vl{font-size:11px;color:var(--muted)}
+.fp{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;margin-bottom:7px}
+.fp-astro{background:#0d1c36;color:#58a6ff;border:1px solid #1c3454}
+.fp-dual{background:#1a0c2e;color:#c084fc;border:1px solid #3d1c6e}
+.fp-vis{background:#0d2818;color:#3fb950;border:1px solid #1a4d2e}
+.fp-none{background:var(--bg3);color:var(--muted);border:1px solid var(--border)}
+/* Planet / Comet rows */
+.prow{display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bg3)}
+.prow:last-child{border:none}
+.pico{font-size:18px;line-height:1;text-align:center}
+.pname{font-size:12px;font-weight:600;color:var(--text)}
+.psub{font-size:10px;color:var(--muted)}
+.pright{text-align:right}
+.palt{font-family:var(--mono);font-size:13px;font-weight:600}
+.pmag{font-size:10px;color:var(--muted)}
+.pset{font-size:10px;color:var(--muted);margin-top:2px}
+/* Event rows */
+.erow{display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid var(--bg3)}
+.erow:last-child{border:none}
+.edot{width:8px;height:8px;border-radius:50%;margin-top:4px;flex-shrink:0}
+.etitle{font-size:12px;font-weight:600;color:var(--text)}
+.esub{font-size:11px;color:var(--muted);line-height:1.4}
+.edate{font-family:var(--mono);font-size:10px;margin-top:2px}
+/* Misc */
+.divider{display:flex;align-items:center;gap:10px;margin:16px 0 12px;font-size:9px;font-weight:600;letter-spacing:2px;color:var(--muted)}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.footer{margin-top:14px;padding:9px 13px;background:var(--bg2);border-radius:8px;font-size:11px;color:var(--muted);line-height:1.7;border:1px solid var(--border)}
+.sq-badge{padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600}
+.dark-window{margin:6px -16px 0;padding:7px 16px;background:var(--green-bg);border-top:1px solid var(--green-dim);border-bottom:1px solid var(--green-dim)}
+.legend-bar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;align-items:center}
+.legend-title{font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);width:100%;margin-bottom:4px}
+.status-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:middle}
+/* Solar panel */
+.solar-panel{background:var(--bg2);border:1px solid #3a2000;border-radius:10px;padding:0;overflow:hidden;margin-bottom:14px}
+.solar-header{background:#1a1000;border-bottom:1px solid #3a2000;padding:11px 16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.solar-body{display:grid;grid-template-columns:300px 1fr;gap:0}
+.solar-img-col{border-right:1px solid #3a2000;padding:14px;display:flex;flex-direction:column;gap:10px}
+.solar-img-wrap{position:relative;border-radius:8px;overflow:hidden;background:#000;aspect-ratio:1}
+.solar-img-wrap img{width:100%;height:100%;object-fit:cover;display:block;filter:sepia(0.3) saturate(1.2)}
+.solar-img-ts{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.65);font-size:9px;color:rgba(255,200,50,0.8);padding:3px 7px;font-family:var(--mono)}
+.solar-data-col{padding:14px}
+.solar-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.solar-stat{background:#0d0a00;border:1px solid #3a2000;border-radius:7px;padding:8px 10px}
+.solar-stat-label{font-size:9px;color:#8b7a5a;letter-spacing:.5px;text-transform:uppercase;margin-bottom:3px}
+.solar-stat-val{font-family:var(--mono);font-size:18px;font-weight:700}
+.solar-stat-sub{font-size:10px;color:var(--muted);margin-top:2px}
+.ar-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #1e1600;font-size:12px}
+.ar-row:last-child{border:none}
+.flare-bar{height:6px;border-radius:3px;margin-top:5px;background:var(--bg3);overflow:hidden}
+.flare-fill{height:100%;border-radius:3px;transition:width 0.5s}
+.warn-box{padding:8px 11px;border-radius:7px;font-size:11px;line-height:1.5;margin-top:10px}
+.solar-settings{padding:10px 14px;background:#0d0a00;border-top:1px solid #3a2000;font-size:11px}
+@media(max-width:700px){.solar-body{grid-template-columns:1fr}.solar-img-col{border-right:none;border-bottom:1px solid #3a2000}}
+@media(max-width:640px){.grid3,.grid2{grid-template-columns:1fr}.sgrid{grid-template-columns:repeat(2,1fr)}.info-grid{grid-template-columns:repeat(2,1fr)}.solar-grid{grid-template-columns:1fr 1fr}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>DWARF 3 · Beobachtungsplaner</h1>
+    <div class="subtitle" id="loc-subtitle">Lade Standort…</div>
+  </div>
+  <div class="header-right">
+    <span id="sq" class="sq-badge"></span>
+    <div>
+      <div class="clock" id="clk">--:--:--</div>
+      <div class="clock-label"><span id="clock-tz">Europe/Berlin</span></div>
+    </div>
+    <button onclick="doAll()">↻ Aktualisieren</button>
+  </div>
+</div>
+
+<!-- Location selector bar -->
+<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;flex-wrap:wrap;gap:10px">
+  <span style="font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);white-space:nowrap">📍 Beobachtungsort</span>
+  <select id="loc-select" onchange="onLocSelect()" style="flex:1;min-width:180px;max-width:320px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:5px 10px;border-radius:6px;font-size:12px;font-family:var(--sans)">
+    <optgroup label="── Deutschland ──">
+      <option value="54.0864,13.2183,Europe/Berlin,Stralsund,MV" selected>Stralsund (54°05'N · 13°13'E)</option>
+      <option value="53.5753,10.0153,Europe/Berlin,Hamburg">Hamburg (53°35'N · 10°01'E)</option>
+      <option value="52.5200,13.4050,Europe/Berlin,Berlin">Berlin (52°31'N · 13°24'E)</option>
+      <option value="51.0504,13.7373,Europe/Berlin,Dresden">Dresden (51°03'N · 13°44'E)</option>
+      <option value="52.3759,9.7320,Europe/Berlin,Hannover">Hannover (52°23'N · 9°44'E)</option>
+      <option value="51.4556,7.0116,Europe/Berlin,Dortmund">Dortmund (51°28'N · 7°01'E)</option>
+      <option value="50.9333,6.9500,Europe/Berlin,Köln">Köln (50°56'N · 6°57'E)</option>
+      <option value="50.1109,8.6821,Europe/Berlin,Frankfurt a.M.">Frankfurt a.M. (50°07'N · 8°41'E)</option>
+      <option value="49.4521,11.0767,Europe/Berlin,Nürnberg">Nürnberg (49°27'N · 11°05'E)</option>
+      <option value="48.7758,9.1829,Europe/Berlin,Stuttgart">Stuttgart (48°47'N · 9°11'E)</option>
+      <option value="48.1351,11.5820,Europe/Berlin,München">München (48°08'N · 11°35'E)</option>
+      <option value="54.3233,10.1394,Europe/Berlin,Kiel">Kiel (54°19'N · 10°08'E)</option>
+    </optgroup>
+    <optgroup label="── Österreich / Schweiz ──">
+      <option value="48.2092,16.3728,Europe/Vienna,Wien">Wien (48°13'N · 16°22'E)</option>
+      <option value="47.8095,13.0550,Europe/Vienna,Salzburg">Salzburg (47°49'N · 13°03'E)</option>
+      <option value="47.2692,11.4041,Europe/Vienna,Innsbruck">Innsbruck (47°16'N · 11°24'E)</option>
+      <option value="47.3769,8.5417,Europe/Zurich,Zürich">Zürich (47°23'N · 8°33'E)</option>
+      <option value="47.0502,8.3093,Europe/Zurich,Luzern">Luzern (47°03'N · 8°19'E)</option>
+    </optgroup>
+    <optgroup label="── Europa ──">
+      <option value="51.5074,-0.1278,Europe/London,London">London (51°30'N · 0°08'W)</option>
+      <option value="48.8566,2.3522,Europe/Paris,Paris">Paris (48°51'N · 2°21'E)</option>
+      <option value="41.9028,12.4964,Europe/Rome,Rom">Rom (41°54'N · 12°30'E)</option>
+      <option value="52.3676,4.9041,Europe/Amsterdam,Amsterdam">Amsterdam (52°22'N · 4°54'E)</option>
+      <option value="55.6761,12.5683,Europe/Copenhagen,Kopenhagen">Kopenhagen (55°41'N · 12°34'E)</option>
+      <option value="59.9139,10.7522,Europe/Oslo,Oslo">Oslo (59°55'N · 10°45'E)</option>
+    </optgroup>
+    <option value="gps">📡 GPS – Meinen Standort bestimmen</option>
+    <option value="custom">✏️ Manuelle Eingabe…</option>
+  </select>
+  <!-- Manual input (hidden by default) -->
+  <div id="custom-fields" style="display:none;display:none;align-items:center;gap:6px;flex-wrap:wrap">
+    <input id="c-name" placeholder="Ortsname" style="width:110px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:6px;font-size:12px">
+    <input id="c-lat" placeholder="Breite z.B. 51.50" style="width:120px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:6px;font-size:12px">
+    <input id="c-lon" placeholder="Länge z.B. 10.00" style="width:120px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:6px;font-size:12px">
+    <button onclick="applyCustom()">Übernehmen</button>
+  </div>
+  <span id="loc-display" style="font-size:11px;color:var(--muted);font-family:var(--mono)"></span>
+</div>
+<div class="grid3">
+  <div class="panel" id="wp"><div class="sec">Aktuelles Wetter</div><div id="wi" style="color:var(--muted)">Lade…</div></div>
+  <div class="panel"><div class="sec">Astronomische Zeiten</div><div id="at" style="color:var(--muted)">Berechne…</div></div>
+  <div class="panel"><div class="sec">Mondphase</div><div id="mo" style="color:var(--muted)">Berechne…</div></div>
+</div>
+
+<!-- Row 2: Planets / Comets / Events -->
+<div class="grid3">
+  <div class="panel"><div class="sec">🪐 Sichtbare Planeten</div><div id="pl" style="color:var(--muted)">Berechne…</div></div>
+  <div class="panel"><div class="sec">☄️ Aktuelle Kometen</div><div id="co" style="color:var(--muted)">Lade…</div></div>
+  <div class="panel"><div class="sec">🌠 Himmelsereignisse</div><div id="ev" style="color:var(--muted)">Berechne…</div></div>
+</div>
+
+<!-- Solar observation panel -->
+<div class="solar-panel" id="solar-panel">
+  <div class="solar-header">
+    <div>
+      <span style="font-size:14px;font-weight:600;color:#ffb347">☀️ Sonnenbeobachtung</span>
+      <span style="font-size:11px;color:#8b7a5a;margin-left:10px">DWARF 3 · Weißlichtfilter</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span id="solar-activity-badge" style="font-size:12px;padding:3px 11px;border-radius:14px;font-weight:600"></span>
+      <span style="font-size:11px;color:#8b7a5a" id="solar-ts">Lade…</span>
+    </div>
+  </div>
+  <div class="solar-body">
+    <div class="solar-img-col">
+      <div>
+        <div style="font-size:9px;color:#8b7a5a;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">NASA SDO · HMI Weißlicht · Live</div>
+        <div class="solar-img-wrap">
+          <img id="solar-img" src="https://sdo.gsfc.nasa.gov/assets/img/latest/latest_1024_HMIIC.jpg"
+               alt="NASA SDO HMI"
+               onerror="this.src='https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_HMIIC.jpg'"
+               style="cursor:pointer" onclick="window.open('https://sdo.gsfc.nasa.gov/data/','_blank')"
+               title="Klick: NASA SDO öffnen">
+          <div class="solar-img-ts">NASA SDO/HMI · Weißlicht Intensitätskarte · ~15 min Verzögerung</div>
+        </div>
+        <div style="font-size:10px;color:#8b7a5a;margin-top:6px;line-height:1.5">
+          Das HMI-Bild zeigt die Sonnenoberfläche wie sie auch durch den DWARF 3 Weißlichtfilter erscheint — dunkle Sonnenflecken (Umbra/Penumbra) und helle Fackeln (Faculae) nahe dem Rand.
+        </div>
+      </div>
+      <!-- DWARF 3 settings for solar -->
+      <div style="background:#0d0a00;border:1px solid #3a2000;border-radius:7px;padding:10px">
+        <div style="font-size:9px;color:#8b7a5a;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">🔭 DWARF 3 Einstellungen · Sonne</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px">
+          <div><div style="font-size:9px;color:var(--muted)">MODUS</div><div style="font-family:var(--mono);font-size:12px;font-weight:600;color:#ffb347">Solar</div></div>
+          <div><div style="font-size:9px;color:var(--muted)">GAIN</div><div style="font-family:var(--mono);font-size:12px;font-weight:600">20–35</div></div>
+          <div><div style="font-size:9px;color:var(--muted)">BELICHT.</div><div style="font-family:var(--mono);font-size:12px;font-weight:600">Auto</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px">
+          <div><div style="font-size:9px;color:var(--muted)">FILTER</div><div style="font-family:var(--mono);font-size:12px;font-weight:600;color:#ffb347">Solar ⚠</div></div>
+          <div><div style="font-size:9px;color:var(--muted)">STACKING</div><div style="font-family:var(--mono);font-size:12px;font-weight:600">Lucky</div></div>
+          <div><div style="font-size:9px;color:var(--muted)">FRAMES</div><div style="font-family:var(--mono);font-size:12px;font-weight:600">500+</div></div>
+        </div>
+        <div style="font-size:10px;color:#8b7a5a;line-height:1.5">
+          App: <em>DWARF Lab → Astronomie → Sonne</em><br>
+          Bestes Seeing: 10–12 Uhr vor Lufterhitzung.<br>
+          Lucky Imaging Modus für Granulation.
+        </div>
+      </div>
+    </div>
+    <!-- Data column -->
+    <div class="solar-data-col">
+      <div class="solar-grid" id="solar-stats">
+        <div class="solar-stat"><div class="solar-stat-label">Sonnenflecken</div><div class="solar-stat-val" id="ss-spots" style="color:#ffb347">–</div><div class="solar-stat-sub" id="ss-spots-sub">Lädt…</div></div>
+        <div class="solar-stat"><div class="solar-stat-label">Akt. Regionen (AR)</div><div class="solar-stat-val" id="ss-ar" style="color:#ffb347">–</div><div class="solar-stat-sub" id="ss-ar-sub">Lädt…</div></div>
+        <div class="solar-stat"><div class="solar-stat-label">Sol. Flux F10.7</div><div class="solar-stat-val" id="ss-flux" style="color:#e3b341">–</div><div class="solar-stat-sub" id="ss-flux-sub">sfu</div></div>
+        <div class="solar-stat"><div class="solar-stat-label">Geomag. K-Index</div><div class="solar-stat-val" id="ss-kp" style="color:#3fb950">–</div><div class="solar-stat-sub" id="ss-kp-sub">Lädt…</div></div>
+      </div>
+      <!-- Flare activity -->
+      <div style="margin-bottom:12px">
+        <div style="font-size:9px;color:#8b7a5a;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Röntgenstrahlung · Flare-Klasse (24h)</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+          <div style="font-family:var(--mono);font-size:22px;font-weight:700" id="ss-xray-class">–</div>
+          <div style="font-size:11px;color:var(--muted)" id="ss-xray-desc">Lädt…</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;font-size:10px;text-align:center">
+          <div id="fl-a" style="padding:3px;border-radius:4px;background:#0d2818;color:#3fb950">A</div>
+          <div id="fl-b" style="padding:3px;border-radius:4px;background:#0d2818;color:#3fb950">B</div>
+          <div id="fl-c" style="padding:3px;border-radius:4px;background:#2d2100;color:#d29922">C</div>
+          <div id="fl-m" style="padding:3px;border-radius:4px;background:#2a1d00;color:#e3b341">M</div>
+          <div id="fl-x" style="padding:3px;border-radius:4px;background:#2a0d0b;color:#f85149">X</div>
+        </div>
+      </div>
+      <!-- Active regions table -->
+      <div>
+        <div style="font-size:9px;color:#8b7a5a;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Aktive Regionen (NOAA)</div>
+        <div id="ss-ar-table" style="color:var(--muted);font-size:12px">Lade Daten…</div>
+      </div>
+      <!-- Warning / aurora info -->
+      <div id="ss-warn"></div>
+    </div>
+  </div>
+  <div class="solar-settings">
+    <span style="color:#8b7a5a;font-weight:600">⚠ Sicherheit:</span>
+    Niemals ohne montierten Sonnenfilter in die Sonne schauen oder das Teleskop auf die Sonne richten!
+    Der DWARF 3 Weißlichtfilter muss <strong style="color:#ffb347">vor</strong> dem Objektiv sitzen und sicher befestigt sein.
+    Bei Beschädigungen sofort ersetzen. Sonnenbeobachtung nur bei wolkenlosem Himmel.
+    &nbsp;|&nbsp; <span style="color:#8b7a5a">Daten: NOAA SWPC · NASA SDO · Aktualisierung alle 10 min</span>
+  </div>
+</div>
+
+<!-- Filter legend -->
+<div class="legend-bar">
+  <div class="legend-title">DWARF 3 Filterlegende</div>
+  <span class="fp fp-vis">VIS 430–650 nm — Tageslicht &amp; Landschaft</span>
+  <span class="fp fp-astro">Astro 430–690 nm — Galaxien &amp; Sternhaufen</span>
+  <span class="fp fp-dual">Dual-Band OIII/Hα/Hβ — Emissionsnebel</span>
+  <span class="fp fp-none">Kein Filter — sehr helle Objekte</span>
+</div>
+
+<div class="divider">BESTE DEEP-SKY-OBJEKTE FÜR HEUTE NACHT</div>
+<div class="grid2" id="og"></div>
+<div class="footer" id="ft"></div>
+
+<!-- Author / about -->
+<div style="margin-top:10px;padding:10px 16px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;font-size:11px">
+  <div style="color:var(--muted)">
+    <span style="color:var(--text);font-weight:600">DWARF 3 Beobachtungsplaner</span>
+    &nbsp;·&nbsp; Entwickelt von <strong style="color:var(--blue)">Prof. Dr. Karl-Friedrich Krey</strong>
+    &nbsp;·&nbsp; Universität Greifswald &nbsp;·&nbsp; ZZMK
+  </div>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;color:var(--muted)">
+    <a href="https://github.com" target="_blank" style="color:var(--muted);text-decoration:none" title="GitHub">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="vertical-align:middle;margin-right:4px"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      GitHub
+    </a>
+    <span>v2.0 · 2026</span>
+    <span>Daten: NOAA SWPC · NASA SDO · Open-Meteo · Wikimedia</span>
+  </div>
+</div>
+
+<script>
+// ── Location system ──────────────────────────────────────────────────────
+var LAT=54.0864, LON=13.2183, TZ='Europe/Berlin', LOC_NAME='Stralsund';
+
+function loadLocation(){
+  try{
+    var saved=localStorage.getItem('dwarf3_location');
+    if(saved){var s=JSON.parse(saved);LAT=s.lat;LON=s.lon;TZ=s.tz;LOC_NAME=s.name;
+      // Restore dropdown if it matches a preset
+      var sel=document.getElementById('loc-select');
+      for(var i=0;i<sel.options.length;i++){
+        var parts=sel.options[i].value.split(',');
+        if(Math.abs(parseFloat(parts[0])-LAT)<0.01&&Math.abs(parseFloat(parts[1])-LON)<0.01){sel.selectedIndex=i;break;}
+      }
+    }
+  }catch(e){}
+  updateLocDisplay();
+}
+
+function saveLocation(){
+  try{localStorage.setItem('dwarf3_location',JSON.stringify({lat:LAT,lon:LON,tz:TZ,name:LOC_NAME}));}catch(e){}
+}
+
+function updateLocDisplay(){
+  var latD=Math.abs(LAT).toFixed(4)+'°'+(LAT>=0?'N':'S');
+  var lonD=Math.abs(LON).toFixed(4)+'°'+(LON>=0?'E':'W');
+  document.getElementById('loc-subtitle').textContent=latD+' · '+lonD+' · '+LOC_NAME;
+  document.getElementById('loc-display').textContent=latD+'  '+lonD;
+  document.getElementById('clock-tz').textContent=TZ;
+}
+
+function onLocSelect(){
+  var val=document.getElementById('loc-select').value;
+  var cf=document.getElementById('custom-fields');
+  if(val==='custom'){cf.style.display='flex';return;}
+  cf.style.display='none';
+  if(val==='gps'){
+    if(!navigator.geolocation){alert('GPS nicht verfügbar im Browser.');return;}
+    navigator.geolocation.getCurrentPosition(function(pos){
+      LAT=+pos.coords.latitude.toFixed(5);
+      LON=+pos.coords.longitude.toFixed(5);
+      TZ=Intl.DateTimeFormat().resolvedOptions().timeZone;
+      LOC_NAME='GPS-Standort';
+      saveLocation();updateLocDisplay();doAll();
+    },function(){alert('GPS-Zugriff verweigert oder Fehler.');});
+    return;
+  }
+  var parts=val.split(',');
+  if(parts.length>=4){
+    LAT=parseFloat(parts[0]);LON=parseFloat(parts[1]);TZ=parts[2];LOC_NAME=parts[3];
+    saveLocation();updateLocDisplay();doAll();
+  }
+}
+
+function applyCustom(){
+  var name=document.getElementById('c-name').value.trim()||'Mein Ort';
+  var lat=parseFloat(document.getElementById('c-lat').value);
+  var lon=parseFloat(document.getElementById('c-lon').value);
+  if(isNaN(lat)||isNaN(lon)||lat<-90||lat>90||lon<-180||lon>180){
+    alert('Ungültige Koordinaten.\nBreite: -90 bis +90\nLänge: -180 bis +180');return;
+  }
+  LAT=lat;LON=lon;LOC_NAME=name;
+  TZ=Intl.DateTimeFormat().resolvedOptions().timeZone;
+  document.getElementById('custom-fields').style.display='none';
+  saveLocation();updateLocDisplay();doAll();
+}
+
+// ── Constants & helpers ──────────────────────────────────────────────────
+function jd(d){return d.getTime()/86400000+2440587.5;}
+function rd(x){return x*Math.PI/180;}
+function dr(x){return x*180/Math.PI;}
+function nm(x){return((x%360)+360)%360;}
+function gmst(j){var T=(j-2451545)/36525;return nm(280.46061837+360.98564736629*(j-2451545)+0.000387933*T*T);}
+function lst(j){return nm(gmst(j)+LON);}
+function altaz(ra,dec,j){
+  var H=rd(nm(lst(j)-ra)),d=rd(dec),phi=rd(LAT);
+  var sinA=Math.sin(d)*Math.sin(phi)+Math.cos(d)*Math.cos(phi)*Math.cos(H);
+  var alt=dr(Math.asin(Math.max(-1,Math.min(1,sinA))));
+  var cosZ=(Math.sin(rd(dec))-Math.sin(rd(alt))*Math.sin(phi))/(Math.cos(rd(alt))*Math.cos(phi));
+  var az=dr(Math.acos(Math.max(-1,Math.min(1,cosZ))));
+  if(Math.sin(H)>0) az=360-az;
+  return{alt:alt,az:az};
+}
+function sunPos(j){
+  var n=j-2451545,L=nm(280.46+0.9856474*n),g=rd(nm(357.528+0.9856003*n));
+  var lam=rd(L+1.915*Math.sin(g)+0.02*Math.sin(2*g)),eps=rd(23.439);
+  return{ra:nm(dr(Math.atan2(Math.cos(eps)*Math.sin(lam),Math.cos(lam)))),dec:dr(Math.asin(Math.sin(eps)*Math.sin(lam)))};
+}
+function moonPos(j){
+  var n=j-2451545,L0=nm(218.316+13.176396*n),M=nm(134.963+13.064993*n),F=nm(93.272+13.22935*n);
+  var lam=rd(L0+6.289*Math.sin(rd(M))),beta=rd(5.128*Math.sin(rd(F))),eps=rd(23.439);
+  return{ra:nm(dr(Math.atan2(Math.cos(eps)*Math.sin(lam)-Math.tan(beta)*Math.sin(eps),Math.cos(lam)))),
+         dec:dr(Math.asin(Math.sin(beta)*Math.cos(eps)+Math.cos(beta)*Math.sin(eps)*Math.sin(lam)))};
+}
+function moonPhase(j){var p=((j-2451550.1)/29.530588853)%1;if(p<0)p+=1;return{p:p,ill:Math.round((1-Math.cos(2*Math.PI*p))/2*100)};}
+function findEvent(j0,ra,dec,h,rise){
+  var s=4/1440,pv=altaz(ra,dec,j0).alt;
+  for(var t=j0+s;t<j0+1.65;t+=s){
+    var cv=altaz(ra,dec,t).alt;
+    if((rise&&pv<h&&cv>=h)||(!rise&&pv>=h&&cv<h)){
+      var lo=t-s,hi=t;
+      for(var i=0;i<14;i++){var m=(lo+hi)/2;if(altaz(ra,dec,m).alt<h)lo=m;else hi=m;}
+      return(lo+hi)/2;
+    }pv=cv;
+  }return null;
+}
+function findSun(j0,h,rise){var sp=sunPos(j0+0.5);return findEvent(j0,sp.ra,sp.dec,h,rise);}
+function fmtJ(j){if(!j)return'–:–';return new Date((j-2440587.5)*86400000).toLocaleTimeString('de-DE',{timeZone:TZ,hour:'2-digit',minute:'2-digit'});}
+function azN(a){return['N','NNO','NO','ONO','O','OSO','SO','SSO','S','SSW','SW','WSW','W','WNW','NW','NNW'][Math.round(a/22.5)%16];}
+function pIco(p){if(p<.04||p>.96)return'🌑';if(p<.25)return'🌒';if(p<.29)return'🌓';if(p<.5)return'🌔';if(p<.54)return'🌕';if(p<.75)return'🌖';if(p<.79)return'🌗';return'🌘';}
+function pName(p){if(p<.04||p>.96)return'Neumond';if(p<.25)return'Zunehm. Sichel';if(p<.29)return'Erstes Viertel';if(p<.5)return'Zunehm. Gibbous';if(p<.54)return'Vollmond';if(p<.75)return'Abnehm. Gibbous';if(p<.79)return'Letztes Viertel';return'Abnehm. Sichel';}
+function moonDist(ra,dec,j){var m=moonPos(j),dr2=rd(ra-m.ra);return dr(Math.acos(Math.max(-1,Math.min(1,Math.sin(rd(dec))*Math.sin(rd(m.dec))+Math.cos(rd(dec))*Math.cos(rd(m.dec))*Math.cos(dr2)))));}
+
+// ── Planet positions (Meeus low-precision, ~1° accuracy) ─────────────────
+// Orbital elements: [L0, L1, a, e0, i0, Om0, w0] all in degrees / AU
+// L1 in deg/Julian century
+var PLANET_ELEMS = {
+  Mercury: [252.25084, 149474.0722491, 0.387098, 0.20563069, 7.00487,  48.33167,  77.45645,  -1.9, '☿'],
+  Venus:   [181.97973,  58519.21191,   0.723330, 0.00677323, 3.39471,  76.68069, 131.53298,  -4.4, '♀'],
+  Mars:    [355.45332,  19141.0298,    1.523688, 0.09341233, 1.85061,  49.57854, 336.04084,  -2.0, '♂'],
+  Jupiter: [ 34.35151,   3036.30268,   5.202603, 0.04849485, 1.30530, 100.55615,  14.75385,  -2.9, '♃'],
+  Saturn:  [ 50.07571,   1223.50932,   9.554909, 0.05550825, 2.48446, 113.71504,  92.43194,  +0.7, '♄'],
+  Uranus:  [314.05500,    429.86389,  19.21814,  0.04629590, 0.76986,  74.22988, 170.96424,  +5.7, '⛢'],
+  Neptune: [304.34866,    219.45768,  30.11386,  0.00898809, 1.76917, 131.72169,  44.97135,  +7.9, '♆']
+};
+
+// Earth orbital elements for heliocentric→geocentric conversion
+var EARTH = [100.46457, 36000.76983, 1.000000, 0.01671022, 0.00005, -11.26064, 102.94719];
+
+function keplerSolve(M_deg, e){
+  var M=rd(M_deg), E=M;
+  for(var i=0;i<50;i++){var dE=(M-(E-e*Math.sin(E)))/(1-e*Math.cos(E));E+=dE;if(Math.abs(dE)<1e-10)break;}
+  return E;
+}
+
+function helioRect(L0,L1,a,e,inc,Om,w,T){
+  var L=nm(L0+L1*T);
+  var M=nm(L-w);
+  var E=keplerSolve(M,e);
+  var nu=dr(2*Math.atan2(Math.sqrt(1+e)*Math.sin(E/2), Math.sqrt(1-e)*Math.cos(E/2)));
+  var r=a*(1-e*Math.cos(E));
+  var lam=rd(nm(nu+w)), iRd=rd(inc), OmRd=rd(Om);
+  var x=r*(Math.cos(OmRd)*Math.cos(lam)-Math.sin(OmRd)*Math.sin(lam)*Math.cos(iRd));
+  var y=r*(Math.sin(OmRd)*Math.cos(lam)+Math.cos(OmRd)*Math.sin(lam)*Math.cos(iRd));
+  var z=r*(Math.sin(lam)*Math.sin(iRd));
+  return{x:x,y:y,z:z,r:r};
+}
+
+function planetRaDec(name, jn){
+  var T=(jn-2451545)/36525;
+  var el=PLANET_ELEMS[name];
+  var eh=EARTH;
+  var p=helioRect(el[0],el[1],el[2],el[3],el[4],el[5],el[6],T);
+  var e=helioRect(eh[0],eh[1],eh[2],eh[3],eh[4],eh[5],eh[6],T);
+  var dx=p.x-e.x, dy=p.y-e.y, dz=p.z-e.z;
+  var eps=rd(23.439-0.0000004*T);
+  var xeq=dx, yeq=dy*Math.cos(eps)-dz*Math.sin(eps), zeq=dy*Math.sin(eps)+dz*Math.cos(eps);
+  var ra=nm(dr(Math.atan2(yeq,xeq)));
+  var dec=dr(Math.asin(zeq/Math.sqrt(dx*dx+dy*dy+dz*dz)));
+  var dist=Math.sqrt(dx*dx+dy*dy+dz*dz);
+  // Approximate magnitude correction for distance
+  var magBase=el[7];
+  var mag=(magBase+5*Math.log10(p.r*dist)).toFixed(1);
+  return{ra:ra, dec:dec, dist:dist, mag:mag, ico:el[8]};
+}
+
+function renderPlanets(){
+  var now=new Date(), jn=jd(now);
+  var j0=jd(new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate())));
+  var html='';
+  var names=['Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune'];
+  var deNames={'Mercury':'Merkur','Venus':'Venus','Mars':'Mars','Jupiter':'Jupiter','Saturn':'Saturn','Uranus':'Uranus','Neptune':'Neptun'};
+  var settings={
+    Mercury: {exp:'1–3s',  gain:30, note:'Sehr nah an Sonne – nur in Dämmerung'},
+    Venus:   {exp:'0.5–2s',gain:25, note:'Zu hell – ND-Filter empfohlen'},
+    Mars:    {exp:'2–5s',  gain:35, note:'Astro-Filter zeigt Oberflächendetails'},
+    Jupiter: {exp:'0.5–2s',gain:30, note:'Monde und Wolkenbänder sichtbar'},
+    Saturn:  {exp:'1–3s',  gain:35, note:'Ringe bei f/4.2 gut erkennbar'},
+    Uranus:  {exp:'5–15s', gain:60, note:'Kleines blau-grünes Scheibchen'},
+    Neptune: {exp:'10–20s',gain:70, note:'Nur als kleiner blauer Punkt sichtbar'}
+  };
+  var visible=[], belowHorizon=[];
+  names.forEach(function(name){
+    try{
+      var p=planetRaDec(name,jn);
+      var aa=altaz(p.ra,p.dec,jn);
+      var rise=findEvent(j0,p.ra,p.dec,5,true);
+      var set=findEvent(j0,p.ra,p.dec,5,false);
+      var obj={name:name,deName:deNames[name],p:p,aa:aa,rise:rise,set:set,s:settings[name]};
+      if(aa.alt>5) visible.push(obj);
+      else belowHorizon.push(obj);
+    }catch(e){}
+  });
+  visible.sort(function(a,b){return b.aa.alt-a.aa.alt;});
+
+  if(visible.length===0){
+    html='<div style="color:var(--muted);font-size:12px">Aktuell keine Planeten über dem Horizont.</div>';
+  } else {
+    visible.forEach(function(o){
+      var af=o.aa.alt>30?'var(--green)':o.aa.alt>15?'var(--blue)':'var(--yellow)';
+      html+='<div class="prow">';
+      html+='<div class="pico">'+o.p.ico+'</div>';
+      html+='<div><div class="pname">'+o.deName+'</div>';
+      html+='<div class="psub">'+o.s.note+'</div>';
+      html+='<div class="pset">📸 '+o.s.exp+' · Gain '+o.s.gain+(o.set?' · Untergang '+fmtJ(o.set):'')+'</div></div>';
+      html+='<div class="pright"><div class="palt" style="color:'+af+'">'+o.aa.alt.toFixed(0)+'°</div>';
+      html+='<div class="pmag">'+azN(o.aa.az)+'</div>';
+      html+='<div class="pmag">mag '+o.p.mag+'</div></div>';
+      html+='</div>';
+    });
+  }
+  // Show rising soon
+  var risingSoon=belowHorizon.filter(function(o){return o.rise&&(o.rise-jn)*1440<180;});
+  if(risingSoon.length>0){
+    html+='<div style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin:8px 0 4px">Bald aufgehend</div>';
+    risingSoon.forEach(function(o){
+      html+='<div class="prow"><div class="pico">'+o.p.ico+'</div>';
+      html+='<div><div class="pname">'+o.deName+'</div><div class="psub">Aufgang um '+fmtJ(o.rise)+'</div></div>';
+      html+='<div class="pright"><div class="pmag">mag '+o.p.mag+'</div></div></div>';
+    });
+  }
+  document.getElementById('pl').innerHTML=html;
+}
+
+// ── Comets ───────────────────────────────────────────────────────────────
+// Orbital elements for currently/recently observable comets (2025–2026)
+// Format: name, q(AU), e, i(deg), Om(deg), w(deg), Tp(JD), H(abs.mag), G(slope)
+var COMETS=[
+  {name:'12P/Pons-Brooks',    q:0.7806, e:0.9546, i:74.19, Om:255.88, w:199.01, Tp:2460404.56, H:5.5,  G:4.0, note:'Zirkumpolar im Hercules/Cygnus'},
+  {name:'13P/Olbers',         q:1.1779, e:0.9302, i:44.67, Om:85.16,  w:65.10,  Tp:2460502.80, H:6.5,  G:4.0, note:'Morgens im Perseus / Auriga'},
+  {name:'29P/Schw.-Wachm.',   q:5.7721, e:0.0442, i:9.37,  Om:312.47, w:47.77,  Tp:2459892.50, H:6.5,  G:-4.0,note:'Sporadische Ausbrüche möglich'},
+  {name:'C/2024 G3 (ATLAS)',  q:0.0897, e:0.9998, i:95.18, Om:35.51,  w:115.74, Tp:2460681.30, H:4.0,  G:4.0, note:'Nach Perihelion – prüfe aktuelle Helligkeit'},
+  {name:'C/2023 A3 Tsuch.-AT',q:0.3913, e:1.0003, i:139.1, Om:21.56,  w:308.47, Tp:2460585.60, H:5.0,  G:4.0, note:'Erwartet heller Komet Herbst 2024'},
+  {name:'C/2025 N1',          q:1.1200, e:0.9980, i:112.0, Om:142.0,  w:73.0,   Tp:2461180.00, H:7.5,  G:4.0, note:'Vorläufige Elemente – Position unsicher'}
+];
+
+function cometPos(c, jn){
+  // Position from parabolic/near-parabolic orbit
+  var dt=jn-c.Tp; // days from perihelion
+  var ra,dec,r;
+  if(Math.abs(c.e-1)<0.01){
+    // Parabolic orbit (Barker's equation)
+    var W=0.03649116/(c.q*Math.sqrt(c.q));
+    var Y=W*dt;
+    // Approximate solution: tan(v/2)
+    var s=Y; for(var i=0;i<50;i++){var s2=s;s=(2*s*s*s+Y)/(3*(s*s+1));if(Math.abs(s-s2)<1e-10)break;}
+    var nu=2*Math.atan(s);
+    r=c.q*(1+1)/(1+Math.cos(nu));
+  } else {
+    // Elliptical / hyperbolic – use eccentric anomaly approach
+    var a=(c.e!==1)?c.q/(1-c.e):null;
+    if(a>0){
+      var n=0.9856076/(a*Math.sqrt(a)); // deg/day
+      var M=rd(nm(n*dt));
+      var E=keplerSolve(dr(M),c.e);
+      var nu=2*Math.atan2(Math.sqrt(1+c.e)*Math.sin(E/2),Math.sqrt(1-c.e)*Math.cos(E/2));
+      r=a*(1-c.e*Math.cos(E));
+    } else {
+      return null;
+    }
+  }
+  // Heliocentric ecliptic
+  var iR=rd(c.i),OmR=rd(c.Om),wR=rd(c.w);
+  var u=wR+nu;
+  var x=r*(Math.cos(OmR)*Math.cos(u)-Math.sin(OmR)*Math.sin(u)*Math.cos(iR));
+  var y=r*(Math.sin(OmR)*Math.cos(u)+Math.cos(OmR)*Math.sin(u)*Math.cos(iR));
+  var z=r*(Math.sin(u)*Math.sin(iR));
+  // Earth position
+  var T=(jn-2451545)/36525;
+  var eh=EARTH;
+  var ep=helioRect(eh[0],eh[1],eh[2],eh[3],eh[4],eh[5],eh[6],T);
+  var dx=x-ep.x,dy=y-ep.y,dz=z-ep.z;
+  var dist=Math.sqrt(dx*dx+dy*dy+dz*dz);
+  var eps=rd(23.439);
+  var xeq=dx,yeq=dy*Math.cos(eps)-dz*Math.sin(eps),zeq=dy*Math.sin(eps)+dz*Math.cos(eps);
+  var raC=nm(dr(Math.atan2(yeq,xeq)));
+  var decC=dr(Math.asin(zeq/dist));
+  // Magnitude: m = H + 5*log10(dist) + 2.5*G*log10(r)
+  var mag=(c.H + 5*Math.log10(dist) + 2.5*c.G*Math.log10(r)).toFixed(1);
+  return{ra:raC,dec:decC,dist:dist,r:r,mag:mag,dt:dt};
+}
+
+function raToHMS(ra){
+  var h=ra/15, hh=Math.floor(h), mm=Math.floor((h-hh)*60), ss=Math.round(((h-hh)*60-mm)*60);
+  return String(hh).padStart(2,'0')+'h '+String(mm).padStart(2,'0')+'m '+String(ss).padStart(2,'0')+'s';
+}
+function raShort(ra){
+  var h=ra/15, hh=Math.floor(h), mm=Math.floor((h-hh)*60);
+  return String(hh).padStart(2,'0')+'h '+String(mm).padStart(2,'0')+'m';
+}
+function decToDMS(dec){
+  var sign=dec>=0?'+':'-'; var d=Math.abs(dec), dd=Math.floor(d), mm=Math.floor((d-dd)*60), ss=Math.round(((d-dd)*60-mm)*60);
+  return sign+String(dd).padStart(2,'0')+'° '+String(mm).padStart(2,'0')+"' "+String(ss).padStart(2,'0')+'"';
+}
+function decShort(dec){
+  var sign=dec>=0?'+':'-'; var d=Math.abs(dec), dd=Math.floor(d), mm=Math.floor((d-dd)*60);
+  return sign+String(dd).padStart(2,'0')+'° '+String(mm).padStart(2,'0')+"'";
+}
+
+function renderComets(){
+  var now=new Date(), jn=jd(now);
+  var html='';
+  var count=0;
+  COMETS.forEach(function(c){
+    try{
+      var pos=cometPos(c,jn);
+      if(!pos)return;
+      var daysFromPeri=pos.dt;
+      if(parseFloat(pos.mag)>14||Math.abs(daysFromPeri)>1200)return;
+      // Daily motion: position tomorrow vs today
+      var pos2=cometPos(c,jn+1);
+      var dRa=pos2?Math.abs(pos2.ra-pos.ra):null;
+      if(dRa>180)dRa=360-dRa;
+      var dDec=pos2?Math.abs(pos2.dec-pos.dec):null;
+      var motionStr='';
+      if(dRa!==null){
+        var dRaAm=(dRa*60).toFixed(0), dDecAm=(dDec*60).toFixed(0);
+        motionStr=dRaAm+"' RA · "+dDecAm+"' Dec pro Tag";
+      }
+      var aa=altaz(pos.ra,pos.dec,jn);
+      var af=aa.alt>20?'var(--green)':aa.alt>0?'var(--blue)':'var(--muted)';
+      var j0=jd(new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate())));
+      var rise=findEvent(j0,pos.ra,pos.dec,10,true);
+      var set=findEvent(j0,pos.ra,pos.dec,10,false);
+      var periStr=daysFromPeri>0?Math.round(daysFromPeri)+' T nach Perihelion':Math.round(-daysFromPeri)+' T vor Perihelion';
+      var raFull=raToHMS(pos.ra), decFull=decToDMS(pos.dec);
+
+      html+='<div style="padding:10px 0;border-bottom:1px solid var(--bg3)">';
+      html+='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">';
+      html+='<div><div class="pname">☄️ '+c.name+'</div>';
+      html+='<div class="psub">'+periStr+' · mag ~'+pos.mag+'</div></div>';
+      html+='<div class="pright"><div class="palt" style="color:'+af+'">'+aa.alt.toFixed(0)+'°</div>';
+      html+='<div class="pmag">'+azN(aa.az)+'</div></div></div>';
+
+      // GoTo coordinates box — the key info
+      html+='<div style="background:#0a1628;border:1px solid #1c3454;border-radius:7px;padding:8px 10px;margin-bottom:6px;cursor:pointer" '
+           +'onclick="navigator.clipboard&&navigator.clipboard.writeText(\''+raFull+' / '+decFull+'\')" '
+           +'title="Klicken zum Kopieren">';
+      html+='<div style="font-size:9px;color:var(--blue);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">🎯 DWARF 3 GoTo-Koordinaten (J2000) · Klick = Kopieren</div>';
+      html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">';
+      html+='<div><div style="font-size:9px;color:var(--muted)">Rektaszension (RA)</div>'
+           +'<div style="font-family:var(--mono);font-size:15px;font-weight:700;color:var(--text)">'+raShort(pos.ra)+'</div>'
+           +'<div style="font-family:var(--mono);font-size:10px;color:var(--muted)">'+raFull+'</div></div>';
+      html+='<div><div style="font-size:9px;color:var(--muted)">Deklination (Dec)</div>'
+           +'<div style="font-family:var(--mono);font-size:15px;font-weight:700;color:var(--text)">'+decShort(pos.dec)+'</div>'
+           +'<div style="font-family:var(--mono);font-size:10px;color:var(--muted)">'+decFull+'</div></div>';
+      html+='</div></div>';
+
+      // Motion & visibility
+      html+='<div style="display:flex;flex-wrap:wrap;gap:4px;font-size:10px;color:var(--muted)">';
+      if(motionStr) html+='<span style="background:var(--bg3);padding:2px 7px;border-radius:8px">📐 Bewegung: '+motionStr+'</span>';
+      if(rise) html+='<span style="background:var(--bg3);padding:2px 7px;border-radius:8px">↑ '+fmtJ(rise)+'</span>';
+      if(set)  html+='<span style="background:var(--bg3);padding:2px 7px;border-radius:8px">↓ '+fmtJ(set)+'</span>';
+      html+='</div>';
+      html+='<div class="psub" style="margin-top:5px;color:#a0afc0">'+c.note+'</div>';
+      html+='<div class="pset" style="margin-top:3px">📸 20–30s · Gain 72–78 · Astro-Filter · FOV ~3°×2°</div>';
+      html+='</div>';
+      count++;
+    }catch(ex){}
+  });
+  if(count===0){
+    html='<div style="color:var(--muted);font-size:12px;margin-bottom:8px">Aktuell keine hellen Kometen (mag &lt; 14) berechenbar.</div>';
+  }
+  // How-To hint
+  html+='<div style="margin-top:8px;padding:8px 10px;background:var(--bg3);border-radius:6px;border:1px solid var(--border);font-size:11px;color:#a0afc0;line-height:1.6">'
+       +'<strong style="color:var(--text)">DWARF Lab App → Komet aufsuchen:</strong><br>'
+       +'① Astronomie-Modus → <em>Target</em> → <em>Custom</em><br>'
+       +'② RA und Dec aus dem blauen Feld eingeben (oder antippen zum Kopieren)<br>'
+       +'③ <em>GoTo</em> starten — DWARF schwenkt automatisch<br>'
+       +'④ Kometen sind diffuse Objekte – FOV ±1–2° absuchen falls nötig<br>'
+       +'<span style="color:var(--yellow)">⚠ Koordinaten täglich neu laden — Kometen bewegen sich!</span>'
+       +'</div>'
+       +'<div style="margin-top:6px;font-size:10px;color:var(--muted)">Elemente: MPC/JPL · Stand 2025. Neue Kometen: heavens-above.com oder mpc.net</div>';
+  document.getElementById('co').innerHTML=html;
+}
+
+// ── Astronomical Events (meteor showers + calculated events) ─────────────
+// Meteor showers: [name, peak_month(1-12), peak_day, ZHR, radiant_ra, radiant_dec, parent]
+var SHOWERS=[
+  {n:'Quadrantiden',     pm:1,  pd:3,  zhr:120, rra:230, rdec:49, parent:'2003 EH1',    active:[1,1,1,12]},
+  {n:'Lyriden',          pm:4,  pd:22, zhr:18,  rra:271, rdec:34, parent:'C/1861 G1',   active:[4,16,4,25]},
+  {n:'Eta-Aquariiden',   pm:5,  pd:6,  zhr:50,  rra:338, rdec:-1, parent:'1P/Halley',   active:[4,19,5,28]},
+  {n:'Perseiden',        pm:8,  pd:12, zhr:100, rra:48,  rdec:58, parent:'109P/Swift-T.',active:[7,17,8,24]},
+  {n:'Orioniden',        pm:10, pd:21, zhr:20,  rra:95,  rdec:16, parent:'1P/Halley',   active:[10,2,11,7]},
+  {n:'Leoniden',         pm:11, pd:17, zhr:15,  rra:152, rdec:22, parent:'55P/Tempel-T.',active:[11,6,11,30]},
+  {n:'Geminiden',        pm:12, pd:14, zhr:150, rra:112, rdec:33, parent:'3200 Phaethon',active:[12,4,12,20]},
+  {n:'Ursiden',          pm:12, pd:22, zhr:10,  rra:217, rdec:76, parent:'8P/Tuttle',   active:[12,17,12,26]}
+];
+
+// Planned/calculated events 2026 (opposition, conjunction data)
+var FIXED_EVENTS=[
+  {date:new Date('2026-01-10'),title:'Jupiter in Opposition',desc:'Jupiter der Sonne gegenüber – ganze Nacht sichtbar, größter scheinbarer Durchmesser des Jahres.',col:'var(--orange)'},
+  {date:new Date('2026-02-22'),title:'Saturn-Konjunktion Sonne',desc:'Saturn zu nah an der Sonne – nicht beobachtbar.',col:'var(--muted)'},
+  {date:new Date('2026-04-07'),title:'Mars nähert sich Erde',desc:'Mars im Frühling 2026 gut sichtbar im Abendbereich.',col:'var(--red)'},
+  {date:new Date('2026-05-16'),title:'Merkur Ost-Elongation',desc:'Merkur am Abendhimmel – bester Sichtbarkeitszeitraum des Jahres.',col:'var(--yellow)'},
+  {date:new Date('2026-06-15'),title:'Saturn in Opposition',desc:'Saturn ganze Nacht sichtbar – Ringe gut geneigt.',col:'var(--orange)'},
+  {date:new Date('2026-08-04'),title:'Mondfinsternis (partiell)',desc:'Partielle Mondfinsternis – von Mitteleuropa sichtbar.',col:'var(--red)'},
+  {date:new Date('2026-08-12'),title:'Perseiden-Maximum',desc:'Sternschnuppen-Highlight des Jahres. ZHR ~100 Meteore/Stunde.',col:'var(--blue)'},
+  {date:new Date('2026-09-21'),title:'Neptun in Opposition',desc:'Neptun am hellsten – kleines blaues Scheibchen im DWARF 3.',col:'var(--blue)'},
+  {date:new Date('2026-10-03'),title:'Totale Sonnenfinsternis',desc:'Totalitätszone durch Nordafrika/Atlantik – partiell von Stralsund sichtbar.',col:'var(--yellow)'},
+  {date:new Date('2026-11-03'),title:'Uranus in Opposition',desc:'Uranus am hellsten (mag 5.7) – binokulares Ziel, DWARF 3 zeigt Scheibchen.',col:'var(--green)'},
+  {date:new Date('2026-12-14'),title:'Geminiden-Maximum',desc:'Stärkster jährlicher Meteorsschauer. ZHR ~150 Meteore/Stunde.',col:'var(--purple)'}
+];
+
+function renderEvents(){
+  var now=new Date(), jn=jd(now);
+  var today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  var html='';
+
+  // Active meteor showers
+  var activeShowers=[];
+  SHOWERS.forEach(function(s){
+    var a=s.active, am=a[0]-1,ad=a[1],em=a[2]-1,ed=a[3];
+    var start=new Date(today.getFullYear(),am,ad);
+    var end=new Date(today.getFullYear(),em,ed);
+    if(today>=start&&today<=end){
+      var peak=new Date(today.getFullYear(),s.pm-1,s.pd);
+      var dtp=Math.round((peak-today)/86400000);
+      var dtpStr=dtp===0?'Peak HEUTE!':dtp>0?'Peak in '+dtp+' Tagen':'Peak war vor '+(-dtp)+' Tagen';
+      var radAlt=altaz(s.rra,s.rdec,jn).alt.toFixed(0);
+      activeShowers.push({s:s,dtpStr:dtpStr,radAlt:radAlt});
+    }
+  });
+
+  if(activeShowers.length>0){
+    html+='<div style="font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--blue);margin-bottom:6px">🌠 Aktive Meteorschauer</div>';
+    activeShowers.forEach(function(o){
+      html+='<div class="erow">';
+      html+='<div class="edot" style="background:var(--blue)"></div>';
+      html+='<div><div class="etitle">'+o.s.n+'</div>';
+      html+='<div class="esub">ZHR: '+o.s.zhr+'/h · Radiant: '+o.radAlt+'° Höhe · '+o.s.parent+'</div>';
+      html+='<div class="edate" style="color:var(--blue)">'+o.dtpStr+'</div></div></div>';
+    });
+  }
+
+  // Upcoming events (next 60 days)
+  var upcoming=FIXED_EVENTS.filter(function(e){
+    var diff=(e.date-today)/86400000;
+    return diff>=-3&&diff<=60;
+  });
+  upcoming.sort(function(a,b){return a.date-b.date;});
+
+  if(upcoming.length>0){
+    if(activeShowers.length>0) html+='<div style="height:6px"></div>';
+    html+='<div style="font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Nächste Ereignisse</div>';
+    upcoming.slice(0,5).forEach(function(e){
+      var diff=Math.round((e.date-today)/86400000);
+      var dateStr=e.date.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
+      var diffStr=diff===0?'Heute':diff===1?'Morgen':diff<0?'Vor '+(-diff)+' Tagen':'In '+diff+' Tagen';
+      html+='<div class="erow">';
+      html+='<div class="edot" style="background:'+e.col+'"></div>';
+      html+='<div><div class="etitle">'+e.title+'</div>';
+      html+='<div class="esub">'+e.desc+'</div>';
+      html+='<div class="edate" style="color:'+e.col+'">'+dateStr+' · '+diffStr+'</div></div></div>';
+    });
+  }
+
+  if(activeShowers.length===0&&upcoming.length===0){
+    html='<div style="color:var(--muted);font-size:12px">Keine Besonderheiten in den nächsten 60 Tagen.</div>';
+  }
+  document.getElementById('ev').innerHTML=html;
+}
+
+// ── Weather helpers ───────────────────────────────────────────────────────
+function wmoDesc(c){
+  if(c===0)return{ic:'☀️',d:'Klarer Himmel'};if(c<=2)return{ic:'🌤',d:'Überwiegend klar'};
+  if(c===3)return{ic:'☁️',d:'Bedeckt'};if(c<=49)return{ic:'🌫',d:'Nebel/Dunst'};
+  if(c<=67)return{ic:'🌧',d:'Regen'};if(c<=77)return{ic:'❄️',d:'Schnee'};
+  return{ic:'⛈',d:'Gewitter'};
+}
+function seeingScore(cl,wi,hu){
+  var s=3;
+  if(cl<10)s+=1.5;else if(cl<25)s+=0.5;else if(cl>60)s-=1.5;else if(cl>40)s-=0.5;
+  if(wi<8)s+=1;else if(wi>30)s-=1;else if(wi>20)s-=0.5;
+  if(hu>92)s-=1;else if(hu>83)s-=0.5;
+  return Math.max(1,Math.min(5,Math.round(s)));
+}
+function row(k,v,vc){return'<div class="row"><span class="rk">'+k+'</span><span class="rv"'+(vc?' style="color:'+vc+'"':'')+'>'+v+'</span></div>';}
+
+function renderAstro(){
+  var now=new Date();
+  var j0=jd(new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate())));
+  var su=findSun(j0,-0.833,false),ce=findSun(j0,-6,false),ne=findSun(j0,-12,false),ae=findSun(j0,-18,false);
+  var as=findSun(j0,-18,true),sr=findSun(j0,-0.833,true);
+  var dur='';if(ae&&as){var m=Math.round((as-ae)*1440);dur=Math.floor(m/60)+'h '+(m%60)+'min';}
+  var h=row('🌇 Sonnenuntergang',fmtJ(su),'var(--orange)');
+  h+=row('💫 Bürgerl. Dämmerung',fmtJ(ce));
+  h+=row('🔭 Nautische Dämm.',fmtJ(ne));
+  h+='<div class="dark-window"><div style="display:flex;justify-content:space-between"><span style="color:var(--green);font-weight:600;font-size:12px">🌌 Astron. Dunkelheit</span>'
+    +'<span style="font-family:var(--mono);font-size:12px;font-weight:600;color:var(--green)">'+fmtJ(ae)+' – '+fmtJ(as)+'</span></div>'
+    +(dur?'<div style="font-size:10px;color:var(--green);margin-top:2px">Dunkelfenster: '+dur+'</div>':'')+'</div>';
+  h+='<div style="margin-top:4px">'+row('☀️ Sonnenaufgang',fmtJ(sr),'var(--orange)')+'</div>';
+  document.getElementById('at').innerHTML=h;
+}
+
+function renderMoon(){
+  var now=new Date(),jn=jd(now);
+  var j0=jd(new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate())));
+  var ph=moonPhase(jn),mp=moonPos(jn),ma=altaz(mp.ra,mp.dec,jn);
+  var mr=findEvent(j0,mp.ra,mp.dec,-0.5,true),ms=findEvent(j0,mp.ra,mp.dec,-0.5,false);
+  var im,ib,it;
+  if(ph.ill<15){im='Ideal für Deep Sky!';ib='var(--green-bg)';it='var(--green)';}
+  else if(ph.ill<40){im='Gut – helle Objekte bevorzugen';ib='var(--blue-bg)';it='var(--blue)';}
+  else if(ph.ill<65){im='Mäßig – schwache DSO gestört';ib='#2d2100';it='var(--yellow)';}
+  else{im='Ungünstig – Kugelhaufen wählen';ib='var(--red-bg)';it='var(--red)';}
+  var h='<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">'
+    +'<span style="font-size:40px;line-height:1">'+pIco(ph.p)+'</span>'
+    +'<div><div style="font-size:13px;font-weight:600">'+pName(ph.p)+'</div>'
+    +'<div style="font-family:var(--mono);font-size:24px;font-weight:700">'+ph.ill+'%</div>'
+    +'<div style="font-size:10px;color:var(--muted)">Beleuchtungsgrad</div></div></div>';
+  h+=row('Höhe jetzt',ma.alt.toFixed(1)+'° '+azN(ma.az));
+  h+=row('Mondaufgang',fmtJ(mr));
+  h+=row('Monduntergang',fmtJ(ms));
+  h+='<div style="margin-top:8px;padding:7px 10px;border-radius:8px;background:'+ib+'">'
+    +'<div style="font-size:10px;color:'+it+'">Deep-Sky-Einfluss</div>'
+    +'<div style="font-size:12px;font-weight:600;color:'+it+'">'+im+'</div></div>';
+  document.getElementById('mo').innerHTML=h;
+}
+
+function renderWX(wx){
+  if(!wx||!wx.current){document.getElementById('wi').innerHTML='<span style="color:var(--red)">⚠ Wetterdaten nicht verfügbar</span>';return;}
+  var c=wx.current;
+  var cl=Math.round(c.cloud_cover||0),wi=+(c.wind_speed_10m||0).toFixed(1);
+  var hu=Math.round(c.relative_humidity_2m||0),te=+(c.temperature_2m||0).toFixed(1);
+  var ta=Math.round(c.apparent_temperature||te),dp=+(c.dew_point_2m||0).toFixed(1);
+  var pr=Math.round(c.pressure_msl||0),vis2=c.visibility!=null?+(c.visibility/1000).toFixed(1):null;
+  var wd=wmoDesc(c.weather_code||0),se=seeingScore(cl,wi,hu);
+  var sl=['','Schlecht','Mäßig','Mittel','Gut','Exzellent'];
+  var sc2=['','var(--red)','var(--red)','var(--yellow)','var(--blue)','var(--green)'];
+  var cb=cl<25?'var(--green-bg)':cl<55?'#2d2100':'var(--red-bg)';
+  var cf=cl<25?'var(--green)':cl<55?'var(--yellow)':'var(--red)';
+  var h='<div class="sec">Aktuelles Wetter</div>'
+    +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><span style="font-size:34px">'+wd.ic+'</span>'
+    +'<div><div style="font-size:13px;font-weight:600">'+wd.d+'</div>'
+    +'<div style="font-family:var(--mono);font-size:22px;font-weight:700">'+te+'°C '
+    +'<span style="font-size:11px;color:var(--muted);font-weight:400">gefühlt '+ta+'°C</span></div></div></div>';
+  h+=row('Bewölkung','<span class="badge" style="background:'+cb+';color:'+cf+'">'+cl+'%</span>');
+  h+=row('Luftfeuchtigkeit',hu+'% <span style="font-size:10px;color:var(--muted)">Taupkt. '+dp+'°C</span>');
+  h+=row('Luftdruck',pr+' hPa');
+  h+=row('Wind',wi+' km/h '+azN(c.wind_direction_10m||0));
+  if(vis2!==null)h+=row('Sichtweite',vis2+' km');
+  h+='<div class="row" style="border:none"><span class="rk">Seeing</span>'
+    +'<span style="font-family:var(--mono);color:'+sc2[se]+'">'+'●'.repeat(se)+'○'.repeat(5-se)
+    +' <span style="font-size:12px">'+sl[se]+'</span></span></div>';
+  document.getElementById('wp').innerHTML=h;
+  renderSQ(cl,wi,hu);
+}
+
+function renderSQ(cl,wi,hu){
+  var se=seeingScore(cl||60,wi||10,hu||70);
+  var ph=moonPhase(jd(new Date()));
+  if(ph.ill<20)se=Math.min(5,se+1);else if(ph.ill>65)se=Math.max(1,se-1);
+  if(cl>65)se=Math.max(1,se-1);
+  se=Math.max(1,Math.min(5,Math.round(se)));
+  var lb=['','Sehr schlecht','Schlecht','Mäßig','Gut','Ausgezeichnet'];
+  var bg=['','var(--red-bg)','var(--red-bg)','#2d2100','var(--blue-bg)','var(--green-bg)'];
+  var fg=['','var(--red)','var(--red)','var(--yellow)','var(--blue)','var(--green)'];
+  document.getElementById('sq').innerHTML='<span class="sq-badge" style="background:'+bg[se]+';color:'+fg[se]+';border:1px solid '+fg[se]+'">'+'★'.repeat(se)+'☆'.repeat(5-se)+' '+lb[se]+'</span>';
+}
+
+// ── Altitude curve canvas ─────────────────────────────────────────────────
+function drawCurve(cvs,ra,dec,jn){
+  var W=cvs.offsetWidth||400,H=68;cvs.width=W;cvs.height=H;
+  var ctx=cvs.getContext('2d');
+  var toY=function(a){return H-4-(Math.max(0,Math.min(90,a))/90)*(H-14);};
+  [20,45].forEach(function(a){
+    var y=toY(a);
+    ctx.strokeStyle='rgba(255,255,255,0.07)';ctx.lineWidth=0.5;ctx.setLineDash([2,3]);
+    ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='rgba(255,255,255,0.25)';ctx.font='8px sans-serif';ctx.textAlign='left';ctx.fillText(a+'°',2,y-2);
+  });
+  var hz=toY(0);
+  ctx.strokeStyle='rgba(255,255,255,0.2)';ctx.lineWidth=0.8;ctx.setLineDash([3,3]);
+  ctx.beginPath();ctx.moveTo(0,hz);ctx.lineTo(W,hz);ctx.stroke();ctx.setLineDash([]);
+  var pts=[];for(var i=0;i<=100;i++){var t=jn+(i*10-20)/1440;pts.push({x:i/100*W,y:altaz(ra,dec,t).alt});}
+  ctx.beginPath();pts.forEach(function(pt,i){var y=toY(pt.y);i?ctx.lineTo(pt.x,y):ctx.moveTo(pt.x,y);});
+  ctx.lineTo(W,hz);ctx.lineTo(0,hz);ctx.closePath();ctx.fillStyle='rgba(88,166,255,0.1)';ctx.fill();
+  ctx.beginPath();pts.forEach(function(pt,i){var y=toY(pt.y);i?ctx.lineTo(pt.x,y):ctx.moveTo(pt.x,y);});
+  ctx.strokeStyle='#58a6ff';ctx.lineWidth=1.8;ctx.stroke();
+  ctx.beginPath();ctx.arc(pts[2].x,toY(pts[2].y),3.5,0,2*Math.PI);ctx.fillStyle='#58a6ff';ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.3)';ctx.font='8px sans-serif';ctx.textAlign='center';
+  var nh=new Date().getHours();
+  [2,4,6,8].forEach(function(dh){ctx.fillText(String((nh+dh)%24).padStart(2,'0')+'h',(dh*60/600)*W,H);});
+}
+
+// ── DSO Objects & Wikipedia images ──────────────────────────────────────
+var OBJS=[
+  {id:'M81', n:'Bodes Galaxie',        ra:148.888,dec:69.065,mag:6.9, sz:"26'×14'",ty:'Spiralgalaxie (SA(s)ab)',    con:'Ursa Major',    dist:'11,8 Mio. Lj',entd:'1774 · J.E. Bode',
+   desc:'Zirkumpolar – ganze Nacht sichtbar. Heller Kern, früh erkennbare Spiralarme.',
+   tip:'Spiral-Arme ab ~60 Frames sichtbar. M82 gleichzeitig ins Bildfeld nehmen!',
+   exp:'15–25s',gain:65,fr:'100–200',filt:'astro',wiki:'Messier_81'},
+  {id:'M82', n:'Zigarren-Galaxie',     ra:148.969,dec:69.679,mag:8.4, sz:"11'×4'", ty:'Irreg. Galaxie (I0)',        con:'Ursa Major',    dist:'12,7 Mio. Lj',entd:'1774 · J.E. Bode',
+   desc:'Kantenansicht mit roten Hα-Gasfilamenten aus aktivem Starburst-Kern.',
+   tip:'Dual-Band betont rote Gasfilamente. Gemeinsam mit M81 aufnehmen.',
+   exp:'20–30s',gain:70,fr:'150–250',filt:'astro',wiki:'Messier_82'},
+  {id:'M101',n:'Feuerrad-Galaxie',     ra:210.802,dec:54.349,mag:7.9, sz:"28'×27'",ty:'Spiralgalaxie (SAB(rs)cd)',  con:'Ursa Major',    dist:'21 Mio. Lj',  entd:'1781 · P. Méchain',
+   desc:'Riesige Face-on-Spirale – zirkumpolar, ganze Nacht sichtbar.',
+   tip:'Sehr flächig – lange Belichtungsreihen für die schwachen äußeren Arme nötig.',
+   exp:'20–30s',gain:68,fr:'150–250',filt:'astro',wiki:'Pinwheel_Galaxy'},
+  {id:'M97', n:'Eulennebel',           ra:168.699,dec:55.019,mag:9.9, sz:"3.4'",   ty:'Planetarischer Nebel',       con:'Ursa Major',    dist:'2.030 Lj',    entd:'1781 · P. Méchain',
+   desc:'Alter Planetarennebel mit zwei charakteristischen dunklen Augen.',
+   tip:'Dual-Band zeigt OIII-Hülle eindrucksvoll. Zentralstern (mag 14) schwierig.',
+   exp:'25–30s',gain:78,fr:'200–350',filt:'dual',wiki:'Owl_Nebula'},
+  {id:'M108',n:'Surfbrett-Galaxie',    ra:167.879,dec:55.674,mag:10.0,sz:"8.7'×2'",ty:'Balken-Spirale (SBcd)',      con:'Ursa Major',    dist:'45 Mio. Lj',  entd:'1781 · P. Méchain',
+   desc:'Kantenansicht direkt neben M97 – beide gleichzeitig im DWARF 3 Bildfeld!',
+   tip:'Mit M97 zusammen aufnehmen. Staubbänder bei >150 Frames erkennbar.',
+   exp:'25–30s',gain:72,fr:'180–300',filt:'astro',wiki:'Messier_108'},
+  {id:'M51', n:'Whirlpool-Galaxie',    ra:202.470,dec:47.195,mag:8.4, sz:"11'×8'", ty:'Spiralgalaxie + NGC 5195',   con:'Canes Venatici',dist:'23 Mio. Lj',  entd:'1773 · C. Messier',
+   desc:'Spektakuläre Gezeiteninteraktion mit Begleitgalaxie NGC 5195.',
+   tip:'Verbindungsbrücke zu NGC 5195 ab ~150 Frames erkennbar. Absolutes Highlight!',
+   exp:'20–30s',gain:68,fr:'150–250',filt:'astro',wiki:'Whirlpool_Galaxy'},
+  {id:'M63', n:'Sonnenblumen-Galaxie', ra:198.955,dec:42.030,mag:8.6, sz:"12'×7'", ty:'Spiralgalaxie (SA(rs)bc)',   con:'Canes Venatici',dist:'29 Mio. Lj',  entd:'1779 · P. Méchain',
+   desc:'Feine Spiralstruktur und heller Kern bei mittleren Belichtungszeiten.',
+   tip:'Astro-Filter erhöht Kontrast gegen Lichtverschmutzung deutlich.',
+   exp:'20–25s',gain:67,fr:'120–200',filt:'astro',wiki:'Sunflower_Galaxy'},
+  {id:'M106',n:'NGC 4258',             ra:184.740,dec:47.304,mag:8.4, sz:"18'×7'", ty:'Seyfert-II-Galaxie',         con:'Canes Venatici',dist:'23,7 Mio. Lj',entd:'1781 · P. Méchain',
+   desc:'Aktiver Galaxienkern mit Wassermasern und Jet-induzierten Spiralarmen.',
+   tip:'Anomale Spiralarme brauchen viele Frames und gutes Seeing.',
+   exp:'20–30s',gain:67,fr:'130–220',filt:'astro',wiki:'Messier_106'},
+  {id:'M3',  n:'Kugelhaufen M3',       ra:205.548,dec:28.377,mag:6.2, sz:"18'",    ty:'Kugelsternhaufen (Kl. VI)',   con:'Canes Venatici',dist:'33.900 Lj',  entd:'1764 · C. Messier',
+   desc:'Prächtigster Frühjahrskugelhaufen des Nordhimmels (~500.000 Sterne).',
+   tip:'Kern bei langer Belichtung überstrahlt – kurz belichten, viele Frames stacken.',
+   exp:'3–8s',gain:45,fr:'80–120',filt:'none',wiki:'Messier_3'},
+  {id:'M13', n:'Herkules-Kugelhaufen', ra:250.423,dec:36.461,mag:5.8, sz:"20'",    ty:'Kugelsternhaufen (Kl. V)',    con:'Hercules',      dist:'25.100 Lj',  entd:'1714 · E. Halley',
+   desc:'Prachtvollster nördl. Kugelhaufen – steigt nach Mitternacht hoch auf.',
+   tip:'Randsterne bei f/4.2 gut auflösbar. Kurze Einzelbelichtungen für Kerndetail.',
+   exp:'2–6s',gain:40,fr:'60–100',filt:'none',wiki:'Messier_13'}
+];
+
+function fpC(f){return f==='astro'?'fp-astro':f==='dual'?'fp-dual':f==='vis'?'fp-vis':'fp-none';}
+function fpL(f){return f==='astro'?'Astro-Filter (430–690 nm)':f==='dual'?'Dual-Band (OIII/Hα/Hβ)':f==='vis'?'VIS-Filter (430–650 nm)':'Kein Filter';}
+
+var imgCache={};
+function loadImg(o){
+  var wrap=document.getElementById('img-'+o.id);if(!wrap)return;
+  if(imgCache[o.id]){setImg(wrap,imgCache[o.id]);return;}
+  var url='https://en.wikipedia.org/w/api.php?action=query&titles='+encodeURIComponent(o.wiki)+'&prop=pageimages&format=json&pithumbsize=300&origin=*';
+  fetch(url).then(function(r){return r.json();}).then(function(data){
+    var pages=data&&data.query&&data.query.pages;
+    if(!pages){setFail(wrap);return;}
+    var p=Object.values(pages)[0];
+    var src=p&&p.thumbnail&&p.thumbnail.source;
+    if(src){imgCache[o.id]=src;setImg(wrap,src);}else{setFail(wrap);}
+  }).catch(function(){setFail(wrap);});
+}
+function setImg(wrap,src){
+  wrap.innerHTML='<img src="'+src+'" alt="" style="width:100%;height:100%;object-fit:cover;display:block">'
+    +'<div class="img-credit">© Wikimedia Commons</div>';
+}
+function setFail(wrap){wrap.innerHTML='<div class="img-ph" style="font-size:20px;color:#333">🔭</div>';}
+
+function renderObjects(){
+  var now=new Date(),jn=jd(now);
+  var j0=jd(new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate())));
+  var ph=moonPhase(jn);
+  var scored=OBJS.map(function(o){
+    var cur=altaz(o.ra,o.dec,jn),ms=moonDist(o.ra,o.dec,jn);
+    var pk=cur.alt;for(var t=jn;t<jn+0.6;t+=8/1440){var a=altaz(o.ra,o.dec,t).alt;if(a>pk)pk=a;}
+    var r20=findEvent(j0,o.ra,o.dec,20,true),s20=findEvent(j0,o.ra,o.dec,20,false);
+    var sc=0;
+    if(cur.alt>60)sc+=3;else if(cur.alt>40)sc+=2;else if(cur.alt>20)sc+=1;
+    sc+=pk/90*2;if(ms>90)sc+=1.5;else if(ms>45)sc+=0.7;
+    if(ph.ill<30)sc+=1.2;else if(ph.ill>65)sc-=0.5;if(o.mag<8)sc+=0.5;
+    return Object.assign({},o,{ca:cur.alt,caz:cur.az,pk:pk,ms:ms,sc:sc,r20:r20,s20:s20});
+  });
+  scored.sort(function(a,b){return b.sc-a.sc;});
+  var og=document.getElementById('og');og.innerHTML='';
+  scored.forEach(function(o,idx){
+    var af=o.ca>45?'var(--green)':o.ca>20?'var(--blue)':o.ca>0?'var(--yellow)':'var(--muted)';
+    var mdc=o.ms>90?'var(--green)':o.ms>45?'var(--blue)':'var(--yellow)';
+    var rk=idx===0?'★ Top Pick':'#'+(idx+1);
+    var cls='oc'+(idx===0?' top1':idx<3?' top2':'');
+    var vis;
+    if(o.ca>20&&!o.s20)vis='Zirkumpolar · ganze Nacht über 20°';
+    else if(o.ca>20&&o.s20)vis='Über 20° bis '+fmtJ(o.s20);
+    else if(o.r20)vis='Über 20° ab '+fmtJ(o.r20)+(o.s20?' bis '+fmtJ(o.s20):'');
+    else vis='Derzeit unter 20° Höhe';
+    var card=document.createElement('div');
+    card.className=cls;card.style.animation='fadeIn 0.35s ease '+(idx*0.06)+'s both';
+    card.innerHTML=
+      '<div class="card-top">'
+      +'<div class="card-text">'
+        +'<div class="obj-cat">'+o.id+' &nbsp;·&nbsp; <span style="color:var(--muted)">'+o.con+'</span>'
+          +' &nbsp;<span class="badge" style="background:var(--yellow-bg);color:var(--yellow)">mag '+o.mag+'</span>'
+          +' &nbsp;<span style="font-size:11px;font-weight:600;color:'+(idx===0?'var(--blue)':'var(--muted)')+'">'+rk+'</span></div>'
+        +'<div class="obj-name">'+o.n+'</div>'
+        +'<div class="obj-desc">'+o.desc+'</div>'
+        +'<div class="tags">'
+          +'<span class="badge" style="background:#0d2432;color:var(--blue)">'+o.ty.split('(')[0].trim()+'</span>'
+          +'<span class="badge" style="background:var(--bg3);color:var(--muted)">'+o.sz+'</span>'
+        +'</div>'
+      +'</div>'
+      +'<div class="card-img-wrap" id="img-'+o.id+'"><div class="img-ph" style="font-size:20px;color:#333">🔭</div></div>'
+      +'</div>'
+      +'<div class="info-grid">'
+        +'<div class="ig"><div class="ik">ENTFERNUNG</div><div class="iv">'+o.dist+'</div></div>'
+        +'<div class="ig"><div class="ik">ENTDECKUNG</div><div class="iv">'+o.entd+'</div></div>'
+        +'<div class="ig"><div class="ik">MAX. HÖHE</div><div class="iv" style="color:'+af+'">'+o.pk.toFixed(1)+'°</div></div>'
+        +'<div class="ig"><div class="ik">MONDDIST.</div><div class="iv" style="color:'+mdc+'">'+Math.round(o.ms)+'°</div></div>'
+      +'</div>'
+      +'<div class="curve-wrap"><canvas id="cv-'+o.id+'" style="width:100%;display:block"></canvas></div>'
+      +'<div class="stats-row">'
+        +'<div class="sc"><div class="sl2">Höhe jetzt</div><div class="sv3" style="color:'+af+'">'+o.ca.toFixed(1)+'°</div><div style="font-size:10px;color:var(--muted)">'+azN(o.caz)+'</div></div>'
+        +'<div class="sc"><div class="sl2">Typ</div><div class="sv3" style="font-size:11px;font-family:var(--sans)">'+o.ty.split('(')[0].trim()+'</div></div>'
+        +'<div class="sc"><div class="sl2">Winkelgröße</div><div class="sv3">'+o.sz+'</div></div>'
+      +'</div>'
+      +'<div class="sblock">'
+        +'<div class="slabel">🔭 DWARF 3 Einstellungen</div>'
+        +'<span class="fp '+fpC(o.filt)+'">'+fpL(o.filt)+'</span>'
+        +'<div class="sgrid">'
+          +'<div><div class="sk2">BELICHTUNG</div><div class="sv2">'+o.exp+'</div></div>'
+          +'<div><div class="sk2">GAIN</div><div class="sv2">'+o.gain+'</div></div>'
+          +'<div><div class="sk2">FRAMES</div><div class="sv2">'+o.fr+'</div></div>'
+          +'<div><div class="sk2">HÖHE JETZT</div><div class="sv2" style="color:'+af+'">'+o.ca.toFixed(1)+'°</div></div>'
+        +'</div>'
+        +'<div class="tip">💡 '+o.tip+'</div>'
+        +'<div class="vl">📅 '+vis+'</div>'
+      +'</div>';
+    og.appendChild(card);
+  });
+  setTimeout(function(){
+    scored.forEach(function(o){
+      var cv=document.getElementById('cv-'+o.id);if(cv)drawCurve(cv,o.ra,o.dec,jn);
+      loadImg(o);
+    });
+  },100);
+}
+
+function renderFooter(){
+  var jn=jd(new Date()),ph=moonPhase(jn);
+  var ds;
+  if(ph.ill<15)ds='Heute Nacht sehr gute Bedingungen für Deep-Sky. Geringe Mondbeleuchtung – auch schwache Galaxien und Nebel gut einzufangen.';
+  else if(ph.ill<40)ds='Helle Objekte gut lohnend. Schwache Emissionsnebel mit Dual-Band-Filter angehen.';
+  else if(ph.ill<65)ds='Mond beeinträchtigt schwache Objekte erheblich. Kugelsternhaufen und Galaxienkerne trotzdem attraktiv.';
+  else ds='Ungünstige Mondphase für Deep Sky. Kugelsternhaufen und Planeten lohnend.';
+  var t=new Date().toLocaleTimeString('de-DE',{timeZone:TZ,hour:'2-digit',minute:'2-digit'});
+  document.getElementById('ft').innerHTML='ℹ '+ds
+    +' — Planeten: Meeus-Näherung (±1°). Kometen: MPC-Elemente. Sonne: NOAA SWPC + NASA SDO. Fotos: Wikimedia Commons. Wetter: Open-Meteo. Stand: '+t+' Uhr.';
+}
+
+// ── Solar observation ────────────────────────────────────────────────────
+function renderSolar(){
+  // Refresh SDO image with cache-bust every load
+  var img=document.getElementById('solar-img');
+  if(img) img.src='https://sdo.gsfc.nasa.gov/assets/img/latest/latest_1024_HMIIC.jpg?t='+Date.now();
+
+  document.getElementById('solar-ts').textContent='Lade NOAA-Daten…';
+
+  // 1) Active solar regions
+  fetch('https://services.swpc.noaa.gov/json/solar_regions.json')
+    .then(function(r){return r.json();})
+    .then(function(data){
+      // NOAA returns array sorted by date — get most recent for each region
+      var regions={};
+      data.forEach(function(r){
+        var k=r.region||r.Region;
+        if(!regions[k]||r.observed_date>regions[k].observed_date) regions[k]=r;
+      });
+      var arr=Object.values(regions).filter(function(r){
+        // Only active in last 2 days
+        var d=new Date(r.observed_date||r.ObservedDate);
+        return(Date.now()-d)<2*86400000;
+      });
+      arr.sort(function(a,b){return(b.spot_class||'').length-(a.spot_class||'').length;});
+
+      // Sunspot count
+      var totalSpots=arr.reduce(function(s,r){return s+(parseInt(r.number_spots||r.NumberSpots)||0);},0);
+      document.getElementById('ss-spots').textContent=totalSpots||'0';
+      document.getElementById('ss-spots-sub').textContent=totalSpots>50?'Sehr aktiv':totalSpots>20?'Aktiv':totalSpots>5?'Mäßig aktiv':'Ruhig';
+      document.getElementById('ss-ar').textContent=arr.length||'0';
+      document.getElementById('ss-ar-sub').textContent='Regionen sichtbar';
+
+      // Table
+      if(arr.length===0){
+        document.getElementById('ss-ar-table').innerHTML='<div style="color:var(--muted);font-size:11px">Keine aktiven Regionen gemeldet.</div>';
+      } else {
+        var th='<div style="display:grid;grid-template-columns:60px 55px 55px 55px 1fr;gap:4px;font-size:9px;color:#8b7a5a;padding:4px 0;letter-spacing:.5px;text-transform:uppercase;border-bottom:1px solid #2a1800">'
+              +'<span>NOAA AR</span><span>Klasse</span><span>Flecken</span><span>McInt.</span><span>Magnet</span></div>';
+        var rows=arr.slice(0,6).map(function(r){
+          var ar='AR'+(r.region||r.Region||'?');
+          var cl=r.spot_class||r.SpotClass||'?';
+          var ns=r.number_spots||r.NumberSpots||'–';
+          var mc=r.mag_class||r.MagClass||'–';
+          var mag=r.magnetic_class||r.MagneticClass||'–';
+          var fc=mag.indexOf('X')>=0||mag.indexOf('δ')>=0?'var(--red)':mag.indexOf('β')>=0?'var(--yellow)':'var(--green)';
+          return '<div style="display:grid;grid-template-columns:60px 55px 55px 55px 1fr;gap:4px;font-size:11px;padding:4px 0;border-bottom:1px solid #1e1600;align-items:center">'
+            +'<span style="font-family:var(--mono);font-weight:600;color:#ffb347">'+ar+'</span>'
+            +'<span style="font-family:var(--mono)">'+cl+'</span>'
+            +'<span style="font-family:var(--mono)">'+ns+'</span>'
+            +'<span style="font-family:var(--mono)">'+mc+'</span>'
+            +'<span style="font-family:var(--mono);font-weight:600;color:'+fc+'">'+mag+'</span>'
+            +'</div>';
+        }).join('');
+        document.getElementById('ss-ar-table').innerHTML=th+rows;
+      }
+    })
+    .catch(function(){
+      document.getElementById('ss-ar-table').innerHTML='<div style="color:var(--muted);font-size:11px">NOAA Regionsdaten nicht erreichbar.</div>';
+      document.getElementById('ss-spots').textContent='–';
+      document.getElementById('ss-ar').textContent='–';
+    });
+
+  // 2) GOES X-ray flux (flare class)
+  fetch('https://services.swpc.noaa.gov/json/goes/primary/xrays-1-day.json')
+    .then(function(r){return r.json();})
+    .then(function(data){
+      // Get latest 1-min value for 0.1-0.8nm channel
+      var shortWave=data.filter(function(d){return d.energy==='0.1-0.8nm'||d.satellite;});
+      if(!shortWave.length) shortWave=data;
+      var latest=shortWave[shortWave.length-1];
+      var flux=latest?parseFloat(latest.flux||latest.observed_flux):null;
+      var cls,col,desc;
+      if(!flux||flux<1e-8){cls='A';col='var(--green)';desc='Minimal — ruhige Sonne';}
+      else if(flux<1e-7){cls='B';col='var(--green)';desc='Gering — normale Aktivität';}
+      else if(flux<1e-6){cls='C';col='var(--yellow)';desc='Mittel — kleine Flares möglich';}
+      else if(flux<1e-5){cls='M';col='var(--orange)';desc='Stark — M-Klasse Flare!';}
+      else{cls='X';col='var(--red)';desc='Extrem — X-Klasse Flare!';}
+      document.getElementById('ss-xray-class').textContent=cls;
+      document.getElementById('ss-xray-class').style.color=col;
+      document.getElementById('ss-xray-desc').textContent=desc;
+      // Highlight active class button
+      ['a','b','c','m','x'].forEach(function(c){
+        var el=document.getElementById('fl-'+c);
+        if(c===cls.toLowerCase()){
+          el.style.transform='scale(1.15)';el.style.fontWeight='700';el.style.opacity='1';
+        } else {el.style.opacity='0.45';}
+      });
+      // Overall badge
+      var badge=document.getElementById('solar-activity-badge');
+      var actLabel=cls==='A'||cls==='B'?'Ruhige Sonne':cls==='C'?'Leicht aktiv':cls==='M'?'Aktiv – M-Flare':'🔴 X-Flare!';
+      badge.textContent=actLabel;
+      badge.style.background=cls==='X'?'var(--red-bg)':cls==='M'?'#2a1500':cls==='C'?'var(--yellow-bg)':'var(--green-bg)';
+      badge.style.color=col;
+      badge.style.border='1px solid '+col;
+    })
+    .catch(function(){
+      document.getElementById('ss-xray-class').textContent='–';
+      document.getElementById('ss-xray-desc').textContent='Daten nicht verfügbar';
+    });
+
+  // 3) Planetary K-index (aurora indicator)
+  fetch('https://services.swpc.noaa.gov/json/planetary_k_index_1m.json')
+    .then(function(r){return r.json();})
+    .then(function(data){
+      var latest=data[data.length-1];
+      var kp=latest?parseFloat(latest.kp_index||latest.Kp):null;
+      if(kp===null){document.getElementById('ss-kp').textContent='–';return;}
+      var kpRound=Math.round(kp*10)/10;
+      document.getElementById('ss-kp').textContent=kpRound;
+      var kpc=kp>=7?'var(--red)':kp>=5?'var(--orange)':kp>=4?'var(--yellow)':'var(--green)';
+      document.getElementById('ss-kp').style.color=kpc;
+      var kpDesc=kp>=7?'Starker Sturm – Polarlichter bis DE!':kp>=5?'Mittlerer Sturm – Polarlichter möglich':kp>=4?'Aktiv – evtl. Polarlichter bei 54°N':kp>=3?'Leicht erhöht':'Ruhig';
+      document.getElementById('ss-kp-sub').textContent=kpDesc;
+      // Aurora warning for Stralsund
+      if(kp>=4){
+        document.getElementById('ss-warn').innerHTML=
+          '<div class="warn-box" style="background:#1a0d00;border:1px solid var(--orange);color:var(--orange);margin-top:10px">'
+          +'<strong>🌌 Polarlicht-Chance!</strong> K'+(kpRound>=5?'p ≥ 5 — Polarlichter sind bei '+LAT+'°N gut möglich!':'p = '+kpRound+' — Nordlichter eventuell sichtbar, Richtung Nord schauen.')
+          +'<br><span style="font-size:10px">DWARF 3: Nordrichtung, Astro-Filter, 10–20s, Gain 70. Beste Sichtbarkeit 22–02 Uhr.</span>'
+          +'</div>';
+      } else {
+        document.getElementById('ss-warn').innerHTML='';
+      }
+    })
+    .catch(function(){
+      document.getElementById('ss-kp').textContent='–';
+      document.getElementById('ss-kp-sub').textContent='Daten nicht verfügbar';
+    });
+
+  // 4) Solar flux F10.7
+  fetch('https://services.swpc.noaa.gov/json/f107_cm_flux.json')
+    .then(function(r){return r.json();})
+    .then(function(data){
+      var latest=data[data.length-1];
+      var flux=latest?parseFloat(latest.flux||latest.observed||latest.f107_obs):null;
+      if(!flux){document.getElementById('ss-flux').textContent='–';return;}
+      document.getElementById('ss-flux').textContent=Math.round(flux);
+      var fc=flux>200?'var(--red)':flux>150?'var(--orange)':flux>100?'var(--yellow)':'var(--green)';
+      document.getElementById('ss-flux').style.color=fc;
+      document.getElementById('ss-flux-sub').textContent=flux>200?'Extrem hoch':flux>150?'Sehr hoch':flux>100?'Erhöht – Zyklus-Maximum':'Niedrig – sfu';
+    })
+    .catch(function(){document.getElementById('ss-flux').textContent='–';});
+
+  document.getElementById('solar-ts').textContent='Aktualisiert: '+new Date().toLocaleTimeString('de-DE',{timeZone:TZ,hour:'2-digit',minute:'2-digit'})+' Uhr';
+}
+
+setInterval(function(){
+  document.getElementById('clk').textContent=new Date().toLocaleTimeString('de-DE',{timeZone:TZ,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+},1000);
+
+function doAll(){
+  renderAstro();
+  renderMoon();
+  renderPlanets();
+  renderComets();
+  renderEvents();
+  renderSolar();
+  renderObjects();
+  renderFooter();
+  renderSQ(60,10,70);
+  fetch('https://api.open-meteo.com/v1/forecast?latitude='+LAT+'&longitude='+LON
+    +'&current=temperature_2m,relative_humidity_2m,cloud_cover,wind_speed_10m,wind_direction_10m,apparent_temperature,pressure_msl,dew_point_2m,visibility,weather_code'
+    +'&timezone='+encodeURIComponent(TZ)+'&forecast_days=1')
+    .then(function(r){return r.json();}).then(function(wx){renderWX(wx);}).catch(function(){renderWX(null);});
+}
+loadLocation();
+doAll();
+setInterval(function(){renderSolar();},600000);
+</script>
+</body>
+</html>
