@@ -153,10 +153,8 @@ Dieses Projekt steht unter der [MIT-Lizenz](LICENSE) — freie Nutzung, Weiterga
 
 ## 👤 Autor
 
-**Prof. Dr. Karl-Friedrich Krey**  
-Facharzt für Kieferorthopädie · Amateurastrenom  
-Zentrum für Zahn-, Mund- und Kieferheilkunde (ZZMK)  
-Universität Greifswald
+**Dr. Karl-Friedrich Krey**  
+Greifswald
 
 ---
 
