@@ -1,5 +1,7 @@
 # 🔭 DWARF 3 Beobachtungsplaner
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 Ein vollständiger, browserbasierter Beobachtungsplaner für das **DWARF 3 Smart-Teleskop** — entwickelt für Amateurastromen, die mit minimalem Aufwand maximalen wissenschaftlichen Nutzen aus jeder Beobachtungsnacht herausholen möchten.
 
 **→ [Live-Demo öffnen](https://karl-friedrich-krey.github.io/dwarf3-planner/)**
